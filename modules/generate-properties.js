@@ -7,7 +7,8 @@ const datafolder = "data";
 const gamefolder = "game";
 const serverfolder = path.join(__rootname, datafolder, gamefolder, "Server");
 const propertiesfolder = path.join(__rootname, datafolder, "properties");
-if (!fs.existsSync(propertiesfolder)) fs.mkdirSync(propertiesfolder, { recursive: true });
+if (!fs.existsSync(propertiesfolder))
+  fs.mkdirSync(propertiesfolder, { recursive: true });
 
 const assetsPath = serverfolder;
 
@@ -52,14 +53,22 @@ function writeData(results) {
     const fullpath = result.file;
     const filename = result.filename;
 
-    if (!filename.endsWith(".json") || filename.endsWith("BranchInfo.json") || filename.endsWith(".node.json")) continue;
+    if (
+      !filename.endsWith(".json") ||
+      filename.endsWith("BranchInfo.json") ||
+      filename.endsWith(".node.json")
+    )
+      continue;
 
     const partialpath = fullpath.replace(assetsPath, "");
 
     let data;
     try {
       data = fs.readFileSync(fullpath, "utf8");
-      data = data.replace(/\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g, (m, g) => (g ? "" : m));
+      data = data.replace(
+        /\\"|"(?:\\"|[^"])*"|(\/\/.*|\/\*[\s\S]*?\*\/)/g,
+        (m, g) => (g ? "" : m),
+      );
       data = JSON.parse(data);
     } catch (_) {
       // console.log(fullpath, err);
@@ -74,23 +83,30 @@ function writeData(results) {
     try {
       listProperties(data, partialpath);
     } catch (e) {
-       console.log(e);
+      console.log(e);
     }
   }
 
   Object.entries(properties).forEach(([key, property]) => {
     try {
-      if (property.datas.simple.values.length == 0 && property.datas.simple.types.length == 0) {
-        delete property.datas.simple;
-      } else {
-        property.datas.simple.values = uniq(property.datas.simple.values);
-      }
+      // if (
+      //   property.datas.simple.values.length == 0 &&
+      //   property.datas.simple.types.length == 0
+      // ) {
+      //   delete property.datas.simple;
+      // } else {
+      //   property.datas.simple.values = uniq(property.datas.simple.values);
+      // }
 
-      if (property.sub.length == 0) {
-        delete property.sub;
-      }
+      // if (property.sub.length == 0) {
+      //   delete property.sub;
+      // }
 
-      fs.writeFileSync(`${propertiesfolder}/${key.replaceAll("*", "")}.json`, JSON.stringify(property, null, 2), { encoding: "utf8" });
+      fs.writeFileSync(
+        `${propertiesfolder}/${key.replaceAll("*", "")}.json`,
+        JSON.stringify(property, null, 2),
+        { encoding: "utf8" },
+      );
     } catch (e) {
       console.log(key, e);
     }
@@ -106,35 +122,35 @@ function uniq(a) {
 }
 
 const isInvalidProp = (key) => {
-  return key.startsWith("$") || key.startsWith("#") || key == "blocks" || !isNaN(key);
+  return (
+    key.startsWith("$") || key.startsWith("#") || key == "blocks" || !isNaN(key)
+  );
 };
 
 function listProperties(data, partialpath) {
+  if (!data) return;
   Object.keys(data).forEach((key) => {
     if (isInvalidProp(key)) return;
 
     if (!properties[key]) {
       properties[key] = {
-        sub: [], // Subproperties
-        datas: {
-          simple: {
-            values: [], // Values
-            types: [], // Types
-          },
-          complex: {},
-        },
+        objects: [],
+        array_objects: {},
+        array_primitives: [],
+        primitives: [],
         exemples: [],
       };
     }
 
     const relunch = (data_key) => {
+      if (!data_key) return;
       const subpropsKeys = Object.keys(data_key);
 
       subpropsKeys.forEach((subpropsKey) => {
         if (isInvalidProp(subpropsKey)) return;
 
-        if (!properties[key].sub.includes(subpropsKey)) {
-          properties[key].sub.push(subpropsKey);
+        if (!properties[key].objects.includes(subpropsKey)) {
+          properties[key].objects.push(subpropsKey);
         }
         listProperties(data_key, partialpath);
       });
@@ -148,17 +164,29 @@ function listProperties(data, partialpath) {
       relunch(data[key]);
     } else {
       if (Array.isArray(data[key]) && data[key].length > 0) {
-      
-        data[key].forEach((value) => {
-          if (typeof value === "object") {
-            Object.keys(value).forEach((childKey) => {
-              if (isInvalidProp(childKey)) return;
+        data[key].forEach((subkeys) => {
+          if (typeof subkeys === "object") {
+            Object.keys(subkeys).forEach((subkey) => {
+              if (isInvalidProp(subkey)) return;
 
-              if (!properties[key].datas.complex[childKey]) {
-                properties[key].datas.complex[childKey] = [];
+              if (!properties[key].array_objects[subkey]) {
+                properties[key].array_objects[subkey] = [];
               }
-              //TODO
+
+              let subkeyValue = subkeys[subkey];
+              if (subkeyValue != null && typeof subkeyValue === "object") {
+                // relunch(subkeys);
+                //TODO
+              } else {
+                if (
+                  !properties[key].array_objects[subkey].includes(subkeyValue)
+                )
+                  properties[key].array_objects[subkey].push(subkeyValue);
+              }
             });
+          } else {
+            if (!properties[key].array_primitives.includes(subkeys))
+              properties[key].array_primitives[subkeys].push(subkeys);
           }
 
           // if (!Array.isArray(value) && typeof value === "object") {
@@ -171,10 +199,14 @@ function listProperties(data, partialpath) {
 
         // properties[key].datas.values = properties[key].datas.values.concat(otherSubProps);
         // if (!properties[key].datas.types.includes("array")) properties[key].datas.types.push("array");
-      } else if (!properties[key].datas.simple.values.includes(data[key]) && typeof data[key] !== "object") {
-        properties[key].datas.simple.values.push(data[key]);
-        const type = typeof data[key];
-        if (!properties[key].datas.simple.types.includes(type)) properties[key].datas.simple.types.push(type);
+      } else if (
+        !properties[key].primitives.includes(data[key]) &&
+        typeof data[key] !== "object"
+      ) {
+        properties[key].primitives.push(data[key]);
+        // const type = typeof data[key];
+        // if (!properties[key].datas.simple.types.includes(type))
+        //   properties[key].datas.simple.types.push(type);
       }
     }
   });
