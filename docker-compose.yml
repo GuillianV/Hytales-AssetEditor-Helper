@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  website:
+    container_name: ${PROJECT_NAME}
+    build:
+      context: .
+      dockerfile: Dockerfile
+    networks:
+      - traefik-net
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.${PROJECT_NAME}.rule=Host(`${FULL_DOMAIN_NAME}`)'
+      - 'traefik.http.routers.${PROJECT_NAME}.entrypoints=http'
+      - 'traefik.http.routers.${PROJECT_NAME}-secure.rule=Host(`${FULL_DOMAIN_NAME}`)'
+      - 'traefik.http.routers.${PROJECT_NAME}-secure.entrypoints=https'
+      - 'traefik.http.routers.${PROJECT_NAME}-secure.tls=false'
+      - 'traefik.http.services.${PROJECT_NAME}.loadbalancer.server.port=3000'
+      - 'traefik.docker.network=traefik-net'
+      - 'traefik.http.routers.${PROJECT_NAME}-secure.middlewares=${PROJECT_NAME}-redirect'
+      - 'traefik.http.routers.${PROJECT_NAME}.middlewares=${PROJECT_NAME}-redirect'
+      - 'traefik.http.middlewares.${PROJECT_NAME}-redirect.redirectregex.regex=^https?://${DOMAIN_SDL}\\.${DOMAIN_TLD}/(.*)'
+      - 'traefik.http.middlewares.${PROJECT_NAME}-redirect.redirectregex.replacement=https://${FULL_DOMAIN_NAME}/$${1}'
+      - 'traefik.http.middlewares.${PROJECT_NAME}-redirect.redirectregex.permanent=false'
+    volumes:
+      - type: bind
+        source: ./logs
+        target: /app/logs
+      - type: bind
+        source: ./prisma/db
+        target: /app/prisma/db
+      - type: bind
+        source: ./uploads/
+        target: /app/uploads/
+networks:
+  traefik-net:
+    external: true

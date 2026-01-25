@@ -1,3 +1,5 @@
 data
 downloads
 node_modules
+.hytale-downloader-credentials.json
+.env

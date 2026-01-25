@@ -7,13 +7,17 @@ const data = "data/properties";
 const server = "data/game/Server";
 const app = express();
 
+app.get("/properties", (req, res) => {
+  res.json(fs.readdirSync(data));
+});
+
 app.get("/properties/:key", (req, res) => {
   const key = req.params.key;
-  if (!fs.existsSync(`${data}/${key.replaceAll("*", "")}.json`)) {
+  if (!fs.existsSync(`${data}/${key}`)) {
     res.status(404).json({ error: "Property not found" });
     return;
   } else {
-    const property = fs.readFileSync(`${data}/${key.replaceAll("*", "")}.json`, "utf8");
+    const property = fs.readFileSync(`${data}/${key}`, "utf8");
     res.json(JSON.parse(property));
   }
 });

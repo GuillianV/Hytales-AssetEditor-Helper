@@ -42,11 +42,10 @@ walk(assetsPath, function (err, results) {
   writeData(results);
 });
 
-const properties = {};
-
 function writeData(results) {
-  const fulldata = {};
   const errorPaths = [];
+
+  const generateProperties = new GenerateProperties();
 
   for (let index = 0; index < results.length; index++) {
     const result = results[index];
@@ -71,37 +70,21 @@ function writeData(results) {
       );
       data = JSON.parse(data);
     } catch (_) {
-      // console.log(fullpath, err);
       errorPaths.push(fullpath);
     }
     if (!data) continue;
 
-    fulldata[partialpath] = data;
-
     console.log(partialpath);
     console.log(`${index + 1}/${results.length}`);
     try {
-      listProperties(data, partialpath);
+      generateProperties.masterTick(data, partialpath);
     } catch (e) {
       console.log(e);
     }
   }
-
-  Object.entries(properties).forEach(([key, property]) => {
+  generateProperties.endProcess();
+  Object.entries(generateProperties.properties).forEach(([key, property]) => {
     try {
-      // if (
-      //   property.datas.simple.values.length == 0 &&
-      //   property.datas.simple.types.length == 0
-      // ) {
-      //   delete property.datas.simple;
-      // } else {
-      //   property.datas.simple.values = uniq(property.datas.simple.values);
-      // }
-
-      // if (property.sub.length == 0) {
-      //   delete property.sub;
-      // }
-
       fs.writeFileSync(
         `${propertiesfolder}/${key.replaceAll("*", "")}.json`,
         JSON.stringify(property, null, 2),
@@ -115,99 +98,109 @@ function writeData(results) {
   console.log("Properties generated");
 }
 
-function uniq(a) {
-  return a.sort().filter(function (item, pos, ary) {
-    return !pos || item != ary[pos - 1];
-  });
-}
+class GenerateProperties {
+  constructor() {
+    this.partialpath = "";
+    this.properties = {};
+  }
 
-const isInvalidProp = (key) => {
-  return (
-    key.startsWith("$") || key.startsWith("#") || key == "blocks" || !isNaN(key)
-  );
-};
-
-function listProperties(data, partialpath) {
-  if (!data) return;
-  Object.keys(data).forEach((key) => {
-    if (isInvalidProp(key)) return;
-
-    if (!properties[key]) {
-      properties[key] = {
-        objects: [],
-        array_objects: {},
+  generateProperty = (key) => {
+    if (!this.properties[key]) {
+      this.properties[key] = {
+        properties: [],
+        array_properties: [],
         array_primitives: [],
         primitives: [],
         exemples: [],
       };
     }
+  };
 
-    const relunch = (data_key) => {
-      if (!data_key) return;
-      const subpropsKeys = Object.keys(data_key);
+  propertyExist = (key) => {
+    return typeof this.properties[key] === "object";
+  };
 
-      subpropsKeys.forEach((subpropsKey) => {
-        if (isInvalidProp(subpropsKey)) return;
+  generateExamples = (key) => {
+    if (
+      this.propertyExist(key) &&
+      !this.properties[key].exemples.includes(this.partialpath)
+    ) {
+      this.properties[key].exemples.push(this.partialpath);
+    }
+  };
 
-        if (!properties[key].objects.includes(subpropsKey)) {
-          properties[key].objects.push(subpropsKey);
+  isArray = (data) => {
+    return Array.isArray(data) && data.length > 0;
+  };
+
+  isObject = (data) => {
+    return typeof data === "object" && !Array.isArray(data);
+  };
+
+  masterTick = (datas, partialpath) => {
+    if (typeof datas !== "object") return;
+    this.partialpath = partialpath;
+    this.tickMultiple(datas);
+  };
+
+  tickMultiple = (datas_object) => {
+    Object.keys(datas_object).forEach((key) => {
+      this.tickSingle(datas_object[key], key);
+    });
+  };
+
+  tickSingle = (data, key) => {
+    if (!data) return;
+    this.generateProperty(key);
+    this.generateExamples(key);
+
+    if (this.isObject(data)) {
+      Object.keys(data).forEach((subkey) => {
+        if (!this.properties[key].properties.includes(subkey)) {
+          this.properties[key].properties.push(subkey);
         }
-        listProperties(data_key, partialpath);
+
+        this.tickSingle(data[subkey], subkey);
       });
-    };
+    } else if (this.isArray(data)) {
+      data.forEach((subkeys) => {
+        if (subkeys == null || this.isArray(subkeys)) return;
 
-    if (!properties[key].exemples.includes(partialpath)) {
-      properties[key].exemples.push(partialpath);
+        if (!this.isObject(subkeys)) {
+          if (!this.properties[key].array_primitives.includes(subkeys))
+            this.properties[key].array_primitives.push(subkeys);
+        } else {
+          Object.keys(subkeys).forEach((subkey) => {
+            if (!this.properties[key].array_properties.includes(subkey)) {
+              this.properties[key].array_properties.push(subkey);
+            }
+
+            this.tickSingle(subkeys[subkey], subkey);
+          });
+        }
+      });
+    } else if (!this.properties[key].primitives.includes(data)) {
+      this.properties[key].primitives.push(data);
     }
+  };
 
-    if (!Array.isArray(data[key]) && typeof data[key] === "object") {
-      relunch(data[key]);
-    } else {
-      if (Array.isArray(data[key]) && data[key].length > 0) {
-        data[key].forEach((subkeys) => {
-          if (typeof subkeys === "object") {
-            Object.keys(subkeys).forEach((subkey) => {
-              if (isInvalidProp(subkey)) return;
-
-              if (!properties[key].array_objects[subkey]) {
-                properties[key].array_objects[subkey] = [];
-              }
-
-              let subkeyValue = subkeys[subkey];
-              if (subkeyValue != null && typeof subkeyValue === "object") {
-                // relunch(subkeys);
-                //TODO
-              } else {
-                if (
-                  !properties[key].array_objects[subkey].includes(subkeyValue)
-                )
-                  properties[key].array_objects[subkey].push(subkeyValue);
-              }
-            });
-          } else {
-            if (!properties[key].array_primitives.includes(subkeys))
-              properties[key].array_primitives[subkeys].push(subkeys);
-          }
-
-          // if (!Array.isArray(value) && typeof value === "object") {
-          //   relunch(data[key]);
-          // } else if (value != null && typeof value !== "object") {
-          //   otherSubProps.push(value);
-          // }
-          // otherSubProps.push(value);
-        });
-
-        // properties[key].datas.values = properties[key].datas.values.concat(otherSubProps);
-        // if (!properties[key].datas.types.includes("array")) properties[key].datas.types.push("array");
-      } else if (
-        !properties[key].primitives.includes(data[key]) &&
-        typeof data[key] !== "object"
-      ) {
-        properties[key].primitives.push(data[key]);
-        // const type = typeof data[key];
-        // if (!properties[key].datas.simple.types.includes(type))
-        //   properties[key].datas.simple.types.push(type);
+  endProcess = () => {
+    Object.entries(this.properties).forEach(([key, property]) => {
+      if (property.properties.length == 0) {
+        delete property.properties;
       }
-    }
-  });
+
+      if (property.array_properties.length == 0) {
+        delete property.array_properties;
+      }
+
+      if (property.array_primitives.length == 0) {
+        delete property.array_primitives;
+      }
+
+      if (property.primitives.length == 0) {
+        delete property.primitives;
+      }
+    });
+  };
 }
