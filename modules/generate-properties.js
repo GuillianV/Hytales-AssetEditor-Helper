@@ -73,17 +73,17 @@ function writeData(results) {
     console.log(`${index + 1}/${results.length}`);
     try {
       listProperties(data, partialpath);
-    } catch (_) {
-      // console.log(e);
+    } catch (e) {
+       console.log(e);
     }
   }
 
   Object.entries(properties).forEach(([key, property]) => {
     try {
-      if (property.datas.values.length == 0 && property.datas.types.length == 0) {
-        delete property.datas;
+      if (property.datas.simple.values.length == 0 && property.datas.simple.types.length == 0) {
+        delete property.datas.simple;
       } else {
-        property.datas.values = uniq(property.datas.values);
+        property.datas.simple.values = uniq(property.datas.simple.values);
       }
 
       if (property.sub.length == 0) {
@@ -117,8 +117,11 @@ function listProperties(data, partialpath) {
       properties[key] = {
         sub: [], // Subproperties
         datas: {
-          values: [], // Values
-          types: [], // Types
+          simple: {
+            values: [], // Values
+            types: [], // Types
+          },
+          complex: {},
         },
         exemples: [],
       };
@@ -126,9 +129,10 @@ function listProperties(data, partialpath) {
 
     const relunch = (data_key) => {
       const subpropsKeys = Object.keys(data_key);
-      if (!isValidProp(key)) return;
 
       subpropsKeys.forEach((subpropsKey) => {
+        if (isInvalidProp(subpropsKey)) return;
+
         if (!properties[key].sub.includes(subpropsKey)) {
           properties[key].sub.push(subpropsKey);
         }
@@ -144,21 +148,33 @@ function listProperties(data, partialpath) {
       relunch(data[key]);
     } else {
       if (Array.isArray(data[key]) && data[key].length > 0) {
-        const otherSubProps = [];
+      
         data[key].forEach((value) => {
-          if (!Array.isArray(value) && typeof value === "object") {
-            relunch(data[key]);
-          } else if (value != null && typeof value !== "object") {
-            otherSubProps.push(value);
+          if (typeof value === "object") {
+            Object.keys(value).forEach((childKey) => {
+              if (isInvalidProp(childKey)) return;
+
+              if (!properties[key].datas.complex[childKey]) {
+                properties[key].datas.complex[childKey] = [];
+              }
+              //TODO
+            });
           }
+
+          // if (!Array.isArray(value) && typeof value === "object") {
+          //   relunch(data[key]);
+          // } else if (value != null && typeof value !== "object") {
+          //   otherSubProps.push(value);
+          // }
+          // otherSubProps.push(value);
         });
 
-        properties[key].datas.values = properties[key].datas.values.concat(otherSubProps);
-        if (!properties[key].datas.types.includes("array")) properties[key].datas.types.push("array");
-      } else if (!properties[key].datas.values.includes(data[key]) && typeof data[key] !== "object") {
-        properties[key].datas.values.push(data[key]);
+        // properties[key].datas.values = properties[key].datas.values.concat(otherSubProps);
+        // if (!properties[key].datas.types.includes("array")) properties[key].datas.types.push("array");
+      } else if (!properties[key].datas.simple.values.includes(data[key]) && typeof data[key] !== "object") {
+        properties[key].datas.simple.values.push(data[key]);
         const type = typeof data[key];
-        if (!properties[key].datas.types.includes(type)) properties[key].datas.types.push(type);
+        if (!properties[key].datas.simple.types.includes(type)) properties[key].datas.simple.types.push(type);
       }
     }
   });
