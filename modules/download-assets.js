@@ -18,7 +18,7 @@ if (!fs.existsSync(datafolder)) fs.mkdirSync(datafolder);
 
 console.log("Downloading game files...");
 
-const child = spawn("modules/downloader/hytale-downloader-linux-amd64", [
+const child = spawn("./modules/downloader/hytale-downloader-linux-amd64", [
   "-download-path",
   downloadfolder + "/" + downloadfile,
 ]);
@@ -69,8 +69,3 @@ async function extractZip() {
     resolve();
   });
 }
-
-extractZip().then(() => {
-  console.log("Downloading files complete");
-  process.exit(0);
-});

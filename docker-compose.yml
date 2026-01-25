@@ -23,14 +23,8 @@ services:
       - 'traefik.http.middlewares.${PROJECT_NAME}-redirect.redirectregex.permanent=false'
     volumes:
       - type: bind
-        source: ./logs
-        target: /app/logs
-      - type: bind
-        source: ./prisma/db
-        target: /app/prisma/db
-      - type: bind
-        source: ./uploads/
-        target: /app/uploads/
+        source: ./data/
+        target: /app/data/
 networks:
   traefik-net:
     external: true
