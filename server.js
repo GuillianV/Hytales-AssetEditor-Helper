@@ -12,20 +12,44 @@ app.get("/properties", (req, res) => {
 });
 
 app.get("/properties/:key", (req, res) => {
-  let key = req.params.key;
-  if (!key) {
-    res.status(400).json({ error: "Key is required" });
+  try {
+    let key = req.params.key;
+    let { offset = 0, limit = 10 } = req.query;
+    if (!isNaN(offset)) {
+      offset = parseInt(offset);
+    } else {
+      res.status(400).json({ error: "offset type is not a number" });
+      return;
+    }
+    if (!isNaN(limit)) {
+      limit = parseInt(limit);
+    } else {
+      res.status(400).json({ error: "limit type is not a number" });
+      return;
+    }
+
+    if (!key) {
+      res.status(400).json({ error: "Key is required" });
+      return;
+    }
+    key = key.toLowerCase();
+    let filteredProperties = [
+      ...properties.filter((p) => {
+        return p.toLowerCase().startsWith(key);
+      }),
+      ...properties.filter((p) => {
+        return p.toLowerCase().includes(key) && !p.toLowerCase().startsWith(key);
+      }),
+    ];
+
+    res.json({
+      properties: filteredProperties.slice(offset, offset + limit),
+      total: filteredProperties.length,
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Internal server error" });
     return;
   }
-  key = key.toLowerCase();
-  res.json([
-    ...properties.filter((p) => {
-      return p.toLowerCase().startsWith(key);
-    }),
-    ...properties.filter((p) => {
-      return p.toLowerCase().includes(key) && !p.toLowerCase().startsWith(key);
-    }),
-  ]);
 });
 
 app.get("/property/:key", (req, res) => {
@@ -41,6 +65,10 @@ app.get("/property/:key", (req, res) => {
 
 app.get("/game/server/asset/", (req, res) => {
   const { fullpath } = req.query;
+  if (!fullpath) {
+    res.status(400).json({ error: "fullpath query parameter is required" });
+    return;
+  }
   fs.readFile(`${server}/${fullpath}`, "utf8", (err, data) => {
     if (err) {
       res.status(404).json({ error: "Server asset not found" });
