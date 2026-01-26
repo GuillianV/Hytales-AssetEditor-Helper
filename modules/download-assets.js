@@ -18,7 +18,7 @@ if (!fs.existsSync(datafolder)) fs.mkdirSync(datafolder);
 
 console.log("Downloading game files...");
 
-const child = spawn("./modules/downloader/hytale-downloader-linux-amd64", [
+const child = spawn("./modules/downloader/hytale-downloader-windows-amd64.exe", [
   "-download-path",
   downloadfolder + "/" + downloadfile,
 ]);
