@@ -1,8 +1,6 @@
 import express from "express";
 import fs from "fs";
-import path from "path";
 
-const __dirname = import.meta.dirname;
 const data = "data/properties";
 const server = "data/game/Server";
 const app = express();
