@@ -8,30 +8,35 @@ const server = "data/game/Server";
 const app = express();
 
 app.get("/properties", (req, res) => {
-  res.json(fs.readdirSync(data));
+  fs.readdir(data, (err, files) => {
+    if (err) {
+      res.status(500).json({ error: "Error reading properties" });
+      return;
+    }
+    res.json(files);
+  });
 });
 
 app.get("/properties/:key", (req, res) => {
   const key = req.params.key;
-  if (!fs.existsSync(`${data}/${key}`)) {
-    res.status(404).json({ error: "Property not found" });
-    return;
-  } else {
-    const property = fs.readFileSync(`${data}/${key}`, "utf8");
-    res.json(JSON.parse(property));
-  }
+  fs.readFile(`${data}/${key}`, "utf8", (err, data) => {
+    if (err) {
+      res.status(404).json({ error: "Property not found" });
+      return;
+    }
+    res.json(JSON.parse(data));
+  });
 });
 
 app.get("/game/server/asset/", (req, res) => {
   const { fullpath } = req.query;
-
-  if (typeof fullpath !== "string" || !fs.existsSync(`${server}/${fullpath}`)) {
-    res.status(404).json({ error: "Server asset not found" });
-    return;
-  } else {
-    const property = fs.readFileSync(`${server}/${fullpath}`, "utf8");
-    res.json(JSON.parse(property));
-  }
+  fs.readFile(`${server}/${fullpath}`, "utf8", (err, data) => {
+    if (err) {
+      res.status(404).json({ error: "Server asset not found" });
+      return;
+    }
+    res.json(JSON.parse(data));
+  });
 });
 
 app.listen(3000, () => {
