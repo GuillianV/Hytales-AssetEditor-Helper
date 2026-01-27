@@ -1,9 +1,12 @@
 import express from "express";
 import fs from "fs";
+import cors from "cors";
 
 const data = "data/properties";
 const server = "data/game/Server";
 const app = express();
+
+app.use(cors());
 
 const properties = fs.readdirSync(data);
 
