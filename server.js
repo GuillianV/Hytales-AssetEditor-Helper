@@ -89,12 +89,12 @@ app.get("/game/server/asset/", (req, res) => {
   }
 
   const serverassetsPromises = [retrieveAsset(`${server}/${fullpath}`), retrieveAsset(`${references}/${fullpath.replaceAll("\\\\", "$").replaceAll("/", "$")}`)];
-  Promise.all(serverassetsPromises).then(([asset, reference]) => {
+  Promise.all(serverassetsPromises).then(([asset, references]) => {
     if (!asset) {
       res.status(404).json({ error: "Asset not found" });
       return;
     }
-    res.json({ asset, reference });
+    res.json({ asset, references });
   });
 });
 
