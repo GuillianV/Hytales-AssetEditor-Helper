@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "download": "node modules/download-assets.js",
-    "generate": "node modules/generate-properties.js"
+    "generate": "node modules/generate-properties.js",
+    "generate-server-asset-references": "node modules/generate-server-asset-references.js"
   },
   "type": "module",
   "keywords": [],

@@ -4,6 +4,7 @@ import cors from "cors";
 
 const data = "data/properties";
 const server = "data/game/Server";
+const references = "data/server-assets-references";
 const app = express();
 
 app.use(cors());
@@ -66,18 +67,34 @@ app.get("/property/:key", (req, res) => {
   });
 });
 
+function retrieveAsset(filepath) {
+  return new Promise((resolve, reject) => {
+    console.log(filepath)
+    fs.readFile(filepath, "utf8", (err, data) => {
+      if (err) {
+        resolve({});
+        return;
+      }
+
+      resolve(JSON.parse(data));
+    });
+  });
+}
+
 app.get("/game/server/asset/", (req, res) => {
   const { fullpath } = req.query;
   if (!fullpath) {
     res.status(400).json({ error: "fullpath query parameter is required" });
     return;
   }
-  fs.readFile(`${server}/${fullpath}`, "utf8", (err, data) => {
-    if (err) {
-      res.status(404).json({ error: "Server asset not found" });
+
+  const serverassetsPromises = [retrieveAsset(`${server}/${fullpath}`), retrieveAsset(`${references}/${fullpath.replaceAll("\\\\", "$").replaceAll("/", "$")}`)];
+  Promise.all(serverassetsPromises).then(([asset, reference]) => {
+    if (!asset) {
+      res.status(404).json({ error: "Asset not found" });
       return;
     }
-    res.json(JSON.parse(data));
+    res.json({ asset, reference });
   });
 });
 
