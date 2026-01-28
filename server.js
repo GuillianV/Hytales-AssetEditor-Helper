@@ -81,13 +81,15 @@ function retrieveAsset(filepath) {
 }
 
 app.get("/game/server/asset/", (req, res) => {
-  const { fullpath } = req.query;
+  let { fullpath } = req.query;
   if (!fullpath) {
     res.status(400).json({ error: "fullpath query parameter is required" });
     return;
   }
 
-  const serverassetsPromises = [retrieveAsset(`${server}/${fullpath.replaceAll("\\\\", "/").replaceAll("\\","/")}`), retrieveAsset(`${references}/${fullpath.replaceAll("\\\\", "$").replaceAll("\\","$").replaceAll("/", "$")}`)];
+  fullpath = fullpath.replaceAll("\\\\", "/").replaceAll("\\", "/");
+  
+  const serverassetsPromises = [retrieveAsset(`${server}/${fullpath}`), retrieveAsset(`${references}/${fullpath.replaceAll("/", "$")}`)];
   Promise.all(serverassetsPromises).then(([asset, references]) => {
     if (!asset) {
       res.status(404).json({ error: "Asset not found" });
