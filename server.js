@@ -68,8 +68,7 @@ app.get("/property/:key", (req, res) => {
 });
 
 function retrieveAsset(filepath) {
-  return new Promise((resolve, reject) => {
-    console.log(filepath)
+  return new Promise((resolve, _) => {
     fs.readFile(filepath, "utf8", (err, data) => {
       if (err) {
         resolve({});
