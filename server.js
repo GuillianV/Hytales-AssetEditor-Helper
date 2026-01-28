@@ -4,12 +4,14 @@ import cors from "cors";
 
 const data = "data/properties";
 const server = "data/game/Server";
-const references = "data/server-assets-references";
+const referencesFolder = "data/server-assets-references";
 const app = express();
 
 app.use(cors());
 
 const properties = fs.readdirSync(data);
+const referencesListRaw = fs.readdirSync(referencesFolder);
+const referencesList = referencesListRaw.map((file) => file.replaceAll("$", "/"));
 
 app.get("/properties", (req, res) => {
   res.json(properties);
@@ -80,6 +82,50 @@ function retrieveAsset(filepath) {
   });
 }
 
+app.get("/game/server/assets/", (req, res) => {
+  res.json({
+    references: referencesList,
+    total: referencesList.length,
+  });
+});
+
+app.get("/game/server/assets/:key", (req, res) => {
+  let key = req.params.key;
+
+  let { offset = 0, limit = 10 } = req.query;
+  if (!isNaN(offset)) {
+    offset = parseInt(offset);
+  } else {
+    res.status(400).json({ error: "offset type is not a number" });
+    return;
+  }
+  if (!isNaN(limit)) {
+    limit = parseInt(limit);
+  } else {
+    res.status(400).json({ error: "limit type is not a number" });
+    return;
+  }
+
+  if (!key) {
+    res.status(400).json({ error: "Key is required" });
+    return;
+  }
+  key = key.toLowerCase();
+
+  let filteredProperties = referencesList.filter((p) => {
+    return p.toLowerCase().includes(key);
+  });
+
+  res.json({
+    references: filteredProperties.slice(offset, offset + limit),
+    total: filteredProperties.length,
+  });
+});
+
+app.listen(3000, () => {
+  console.log("Server started on port 3000");
+});
+
 app.get("/game/server/asset/", (req, res) => {
   let { fullpath } = req.query;
   if (!fullpath) {
@@ -88,8 +134,8 @@ app.get("/game/server/asset/", (req, res) => {
   }
 
   fullpath = fullpath.replaceAll("\\\\", "/").replaceAll("\\", "/");
-  
-  const serverassetsPromises = [retrieveAsset(`${server}/${fullpath}`), retrieveAsset(`${references}/${fullpath.replaceAll("/", "$")}`)];
+
+  const serverassetsPromises = [retrieveAsset(`${server}/${fullpath}`), retrieveAsset(`${referencesFolder}/${fullpath.replaceAll("/", "$")}`)];
   Promise.all(serverassetsPromises).then(([asset, references]) => {
     if (!asset) {
       res.status(404).json({ error: "Asset not found" });
