@@ -70,16 +70,20 @@ app.get("/property/:key", (req, res) => {
 });
 
 function retrieveAsset(filepath) {
-  return new Promise((resolve, _) => {
-    fs.readFile(filepath, "utf8", (err, data) => {
-      if (err) {
-        resolve({});
-        return;
-      }
+  try {
+    return new Promise((resolve, _) => {
+      fs.readFile(filepath, "utf8", (err, data) => {
+        if (err) {
+          resolve({});
+          return;
+        }
 
-      resolve(JSON.parse(data));
+        resolve(JSON.parse(data));
+      });
     });
-  });
+  } catch (_) {
+    resolve({});
+  }
 }
 
 app.get("/game/server/assets/", (req, res) => {
