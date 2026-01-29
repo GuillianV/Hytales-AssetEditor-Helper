@@ -59,14 +59,19 @@ app.get("/properties/:key", (req, res) => {
 });
 
 app.get("/property/:key", (req, res) => {
-  const key = req.params.key;
-  fs.readFile(`${data}/${key}`, "utf8", (err, data) => {
-    if (err) {
-      res.status(404).json({ error: "Property not found" });
-      return;
-    }
-    res.json(JSON.parse(data));
-  });
+  try {
+    const key = req.params.key;
+    fs.readFile(`${data}/${key}`, "utf8", (err, data) => {
+      if (err) {
+        res.status(404).json({ error: "Property not found" });
+        return;
+      }
+      res.json(JSON.parse(data));
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Internal server error" });
+    return;
+  }
 });
 
 function retrieveAsset(filepath) {
@@ -87,43 +92,53 @@ function retrieveAsset(filepath) {
 }
 
 app.get("/game/server/assets/", (req, res) => {
-  res.json({
-    references: referencesList,
-    total: referencesList.length,
-  });
+  try {
+    res.json({
+      references: referencesList,
+      total: referencesList.length,
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Internal server error" });
+    return;
+  }
 });
 
 app.get("/game/server/assets/:key", (req, res) => {
-  let key = req.params.key;
+  try {
+    let key = req.params.key;
 
-  let { offset = 0, limit = 10 } = req.query;
-  if (!isNaN(offset)) {
-    offset = parseInt(offset);
-  } else {
-    res.status(400).json({ error: "offset type is not a number" });
+    let { offset = 0, limit = 10 } = req.query;
+    if (!isNaN(offset)) {
+      offset = parseInt(offset);
+    } else {
+      res.status(400).json({ error: "offset type is not a number" });
+      return;
+    }
+    if (!isNaN(limit)) {
+      limit = parseInt(limit);
+    } else {
+      res.status(400).json({ error: "limit type is not a number" });
+      return;
+    }
+
+    if (!key) {
+      res.status(400).json({ error: "Key is required" });
+      return;
+    }
+    key = key.toLowerCase();
+
+    let filteredProperties = referencesList.filter((p) => {
+      return p.toLowerCase().includes(key);
+    });
+
+    res.json({
+      references: filteredProperties.slice(offset, offset + limit),
+      total: filteredProperties.length,
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Internal server error" });
     return;
   }
-  if (!isNaN(limit)) {
-    limit = parseInt(limit);
-  } else {
-    res.status(400).json({ error: "limit type is not a number" });
-    return;
-  }
-
-  if (!key) {
-    res.status(400).json({ error: "Key is required" });
-    return;
-  }
-  key = key.toLowerCase();
-
-  let filteredProperties = referencesList.filter((p) => {
-    return p.toLowerCase().includes(key);
-  });
-
-  res.json({
-    references: filteredProperties.slice(offset, offset + limit),
-    total: filteredProperties.length,
-  });
 });
 
 app.listen(3000, () => {
@@ -140,13 +155,18 @@ app.get("/game/server/asset/", (req, res) => {
   fullpath = fullpath.replaceAll("\\\\", "/").replaceAll("\\", "/");
 
   const serverassetsPromises = [retrieveAsset(`${server}/${fullpath}`), retrieveAsset(`${referencesFolder}/${fullpath.replaceAll("/", "$")}`)];
-  Promise.all(serverassetsPromises).then(([asset, references]) => {
-    if (!asset) {
-      res.status(404).json({ error: "Asset not found" });
+  Promise.all(serverassetsPromises)
+    .then(([asset, references]) => {
+      if (!asset) {
+        res.status(404).json({ error: "Asset not found" });
+        return;
+      }
+      res.json({ asset, references });
+    })
+    .catch((e) => {
+      res.status(500).json({ error: "Internal server error" });
       return;
-    }
-    res.json({ asset, references });
-  });
+    });
 });
 
 app.listen(3000, () => {
