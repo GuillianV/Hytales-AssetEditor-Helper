@@ -78,23 +78,6 @@ app.get("/property/:key", (req, res) => {
   }
 });
 
-function retrieveAsset(filepath) {
-  return new Promise((resolve, _) => {
-    try {
-      fs.readFile(filepath, "utf8", (err, data) => {
-        if (err) {
-          resolve({});
-          return;
-        }
-
-        resolve(JSON.parse(data));
-      });
-    } catch (_) {
-      resolve({});
-    }
-  });
-}
-
 app.get("/game/server/assets/", (req, res) => {
   try {
     res.json({
@@ -145,10 +128,6 @@ app.get("/game/server/assets/:key", (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log("Server started on port 3000");
-});
-
 app.get("/game/server/asset/", (req, res) => {
   let { fullpath } = req.query;
   if (!fullpath) {
@@ -175,6 +154,23 @@ app.get("/game/server/asset/", (req, res) => {
       return;
     });
 });
+
+function retrieveAsset(filepath) {
+  return new Promise((resolve, _) => {
+    try {
+      fs.readFile(filepath, "utf8", (err, data) => {
+        if (err) {
+          resolve({});
+          return;
+        }
+
+        resolve(JSON.parse(data));
+      });
+    } catch (_) {
+      resolve({});
+    }
+  });
+}
 
 app.listen(3000, () => {
   console.log("Server started on port 3000");
