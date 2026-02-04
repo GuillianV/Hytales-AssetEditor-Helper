@@ -11,9 +11,7 @@ app.use(cors());
 
 const properties = fs.readdirSync(data);
 const referencesListRaw = fs.readdirSync(referencesFolder);
-const referencesList = referencesListRaw.map((file) =>
-  file.replaceAll("$", "/"),
-);
+const referencesList = referencesListRaw.map((file) => file.replaceAll("$", "/"));
 
 app.get("/properties", (req, res) => {
   res.json(properties);
@@ -46,9 +44,7 @@ app.get("/properties/:key", (req, res) => {
         return p.toLowerCase().startsWith(key);
       }),
       ...properties.filter((p) => {
-        return (
-          p.toLowerCase().includes(key) && !p.toLowerCase().startsWith(key)
-        );
+        return p.toLowerCase().includes(key) && !p.toLowerCase().startsWith(key);
       }),
     ];
 
@@ -137,10 +133,9 @@ app.get("/game/server/asset/", (req, res) => {
 
   fullpath = fullpath.replaceAll("\\\\", "/").replaceAll("\\", "/");
 
-  const serverassetsPromises = [
-    retrieveAsset(`${server}/${fullpath}`),
-    retrieveAsset(`${referencesFolder}/${fullpath.replaceAll("/", "$")}`),
-  ];
+  console.log(fullpath);
+  const serverassetsPromises = [retrieveAsset(`${server}/${fullpath}`), retrieveAsset(`${referencesFolder}/${fullpath.replaceAll("/", "$")}`)];
+
   Promise.all(serverassetsPromises)
     .then(([asset, references]) => {
       if (!asset) {
@@ -157,18 +152,19 @@ app.get("/game/server/asset/", (req, res) => {
 
 function retrieveAsset(filepath) {
   return new Promise((resolve, _) => {
-    try {
-      fs.readFile(filepath, "utf8", (err, data) => {
-        if (err) {
-          resolve({});
-          return;
-        }
-
-        resolve(JSON.parse(data));
-      });
-    } catch (_) {
-      resolve({});
-    }
+    fs.readFile(filepath, "utf8", (err, data) => {
+      if (err) {
+        resolve({});
+        return;
+      }
+      let dataparsed = {};
+      try {
+        dataparsed = JSON.parse(data);
+      } catch (_) {
+        resolve({});
+      }
+      resolve(dataparsed);
+    });
   });
 }
 
